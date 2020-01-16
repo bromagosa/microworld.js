@@ -363,7 +363,7 @@ MicroWorld.prototype.addBlocksWithSpecs = function (specs) {
     };
     function customBlock (spec) {
         var newBlock = 
-            sprite.stage.globalBlocks.find(function (block) {
+            ide.stage.globalBlocks.find(function (block) {
                 return block.spec == spec;
             });
         if (!newBlock) { return null; }
@@ -629,7 +629,7 @@ MicroWorld.prototype.makeButtonFor = function (label, body) {
     var button = new PushButtonMorph(
         sprite,
         function () {
-            sprite.stage.threads.startProcess(body.expression, sprite);
+            ide.stage.threads.startProcess(body.expression, sprite);
         },
         label
     );
