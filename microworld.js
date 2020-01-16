@@ -144,75 +144,166 @@ MicroWorld.prototype.setBlocksScale = function (zoom) {
     );
 };
 
-MicroWorld.prototype.addTurnIntoBlockMenuOption = function () {
+MicroWorld.prototype.overrideBlockMenu = function () {
     var ide = this.ide,
         sprite = this.sprite;
-    if (!BlockMorph.prototype.originalUserMenu) {
-        BlockMorph.prototype.originalUserMenu = BlockMorph.prototype.userMenu;
-        BlockMorph.prototype.userMenu = function() {
-            menu = this.originalUserMenu();
-            menu.addItem(
-                "turn into a block",
-                function () {
-                    var target = this.scriptTarget(),
-                        topBlock = this;
-                    ide.prompt('Block name?', function (name) {
-                        var definition = new CustomBlockDefinition(name);
-                        if (topBlock instanceof CommandBlockMorph ||
-                            topBlock instanceof CustomCommandBlockMorph) {
-                            definition.type = 'command';
-                            definition.body = Process.prototype.reify.call(
-                                null,
-                                topBlock.fullCopy(),
-                                new List(),
-                                true // ignore empty slots for custom block
-                                     // reification
-                            );
-                        } else if (topBlock instanceof ReporterBlockMorph) {
-                            if (topBlock.isPredicate) {
-                                definition.type = 'predicate';
-                            } else {
-                                definition.type = 'reporter';
-                            }
-                            reportBlock =
-                                SpriteMorph.prototype.blockForSelector(
-                                    'doReport'
-                                );
-                            reportBlock.silentReplaceInput(
-                                reportBlock.inputs()[0],
-                                topBlock.fullCopy()
-                            );
-                            definition.body = Process.prototype.reify.call(
-                                null,
-                                reportBlock,
-                                new List(),
-                                true // ignore empty slots for custom block
-                                     // reification
-                            );
+    if (!BlockMorph.prototype.oldUserMenu) {
+        BlockMorph.prototype.oldUserMenu = BlockMorph.prototype.userMenu;
+        BlockMorph.prototype.userMenu = function () {
+            if (ide.microWorldMode) {
+                var menu = new MenuMorph(this),
+                    world = this.world(),
+                    myself = this,
+                    proc = this.activeProcess();
+
+                menu.addItem(
+                    "help...",
+                    'showHelp'
+                );
+
+                if (this.isTemplate) { return menu }
+
+                if (this instanceof CustomCommandBlockMorph ||
+                        this instanceof CustomReporterBlockMorph) {
+                    menu.addItem(
+                        "delete block definition...",
+                        'deleteBlockDefinition'
+                    );
+                    menu.addItem("edit...", 'edit');
+                }
+
+                menu.addLine();
+
+                menu.addItem(
+                    "duplicate",
+                    function () {
+                        var dup = myself.fullCopy(),
+                            ide = myself.parentThatIsA(IDE_Morph),
+                            blockEditor = myself.parentThatIsA(BlockEditorMorph);
+                        dup.pickUp(world);
+                        // register the drop-origin, so the block can
+                        // slide back to its former situation if dropped
+                        // somewhere where it gets rejected
+                        if (!ide && blockEditor) {
+                            ide = blockEditor.target.parentThatIsA(IDE_Morph);
                         }
-                        definition.category = 'other';
-                        definition.isGlobal = true;
-                        definition.body.outerContext = null;
-                        definition.codeHeader = 'microworld'; // watermark it
-                        ide.stage.globalBlocks.push(definition);
-                        sprite.blocksCache['microworld'].push(definition.templateInstance());
-                        sprite.refreshMicroWorldPalette();
-                        sprite.hideSearchButton();
-                        editor = new BlockEditorMorph(definition, target);
-                        editor.firstTime = true;
-                        editor.popUp(); 
-                    });
-                },
-                'turn the block stack starting\nhere into a custom block.'
-            );
-            return menu;
+                        if (ide) {
+                            world.hand.grabOrigin = {
+                                origin: ide.palette,
+                                position: ide.palette.center()
+                            };
+                        }
+                    },
+                    'make a copy\nand pick it up'
+                );
+
+                if (this instanceof CommandBlockMorph && this.nextBlock()) {
+                    menu.addItem(
+                        (proc ? this.fullCopy() : this).thumbnail(0.5, 60),
+                        function () {
+                            var cpy = myself.fullCopy(),
+                                nb = cpy.nextBlock(),
+                                ide = myself.parentThatIsA(IDE_Morph),
+                                blockEditor = myself.parentThatIsA(BlockEditorMorph);
+                            if (nb) {nb.destroy(); }
+                            cpy.pickUp(world);
+                            if (!ide && blockEditor) {
+                                ide = blockEditor.target.parentThatIsA(IDE_Morph);
+                            }
+                            if (ide) {
+                                world.hand.grabOrigin = {
+                                    origin: ide.palette,
+                                    position: ide.palette.center()
+                                };
+                            }
+                        },
+                        'only duplicate this block'
+                    );
+                }
+                menu.addItem(
+                    "turn into a block",
+                    function () {
+                        var target = this.scriptTarget(),
+                            topBlock = this;
+                        ide.prompt('Block name?', function (name) {
+                            var definition = new CustomBlockDefinition(name);
+                            if (topBlock instanceof CommandBlockMorph ||
+                                topBlock instanceof CustomCommandBlockMorph) {
+                                definition.type = 'command';
+                                definition.body = Process.prototype.reify.call(
+                                    null,
+                                    topBlock.fullCopy(),
+                                    new List(),
+                                    true // ignore empty slots for custom block
+                                         // reification
+                                );
+                            } else if (topBlock instanceof ReporterBlockMorph) {
+                                if (topBlock.isPredicate) {
+                                    definition.type = 'predicate';
+                                } else {
+                                    definition.type = 'reporter';
+                                }
+                                reportBlock =
+                                    SpriteMorph.prototype.blockForSelector(
+                                        'doReport'
+                                    );
+                                reportBlock.silentReplaceInput(
+                                    reportBlock.inputs()[0],
+                                    topBlock.fullCopy()
+                                );
+                                definition.body = Process.prototype.reify.call(
+                                    null,
+                                    reportBlock,
+                                    new List(),
+                                    true // ignore empty slots for custom block
+                                         // reification
+                                );
+                            }
+                            definition.category = 'other';
+                            definition.isGlobal = true;
+                            definition.body.outerContext = null;
+                            definition.codeHeader = 'microworld'; // watermark
+                            ide.stage.globalBlocks.push(definition);
+                            sprite.blocksCache['microworld'].push(
+                                definition.templateInstance()
+                            );
+                            sprite.refreshMicroWorldPalette();
+                            sprite.hideSearchButton()
+                            editor = new BlockEditorMorph(definition, target);
+                            editor.firstTime = true;
+                            editor.popUp();
+                        });
+                    },
+                    'turn the block stack starting\nhere into a custom block.'
+                );
+
+                return menu;
+
+            } else {
+                return this.oldUserMenu();
+            }
         };
+        CustomReporterBlockMorph.prototype.oldUserMenu =
+            CustomReporterBlockMorph.prototype.userMenu;
+        CustomCommandBlockMorph.prototype.oldUserMenu =
+            CustomCommandBlockMorph.prototype.userMenu;
+        CustomCommandBlockMorph.prototype.userMenu =
+            BlockMorph.prototype.userMenu;
+        CustomReporterBlockMorph.prototype.userMenu =
+            BlockMorph.prototype.userMenu;
     }
 };
 
-MicroWorld.prototype.removeTurnIntoBlockMenuOption = function () {
-    if (BlockMorph.prototype.originalUserMenu) {
-        BlockMorph.prototype.userMenu = BlockMorph.prototype.originalUserMenu;
+MicroWorld.prototype.restoreBlockMenu = function () {
+    if (BlockMorph.prototype.oldUserMenu) {
+        BlockMorph.prototype.userMenu = BlockMorph.prototype.oldUserMenu;
+        delete BlockMorph.prototype.oldUserMenu;
+        CustomReporterBlockMorph.prototype.userMenu =
+            CustomReporterBlockMorph.prototype.oldUserMenu;
+        delete CustomReporterBlockMorph.prototype.oldUserMenu;
+        CustomCommandBlockMorph.prototype.userMenu =
+            CustomCommandBlockMorph.prototype.oldUserMenu;
+        delete CustomCommandBlockMorph.prototype.oldUserMenu;
     }
 };
 
@@ -395,7 +486,7 @@ MicroWorld.prototype.addBlocksWithSpecs = function (specs) {
         return newBlock;
     };
     function customBlock (spec) {
-        var newBlock = 
+        var newBlock =
             ide.stage.globalBlocks.find(function (block) {
                 return block.spec == spec;
             });
@@ -404,7 +495,7 @@ MicroWorld.prototype.addBlocksWithSpecs = function (specs) {
     };
     function block (selectorOrSpec) {
         if (selectorOrSpec === '-' || selectorOrSpec === '=') {
-            return selectorOrSpec;    
+            return selectorOrSpec;
         } else {
             return primitiveBlock(selectorOrSpec) ||
                 customBlock(selectorOrSpec);
@@ -576,7 +667,7 @@ MicroWorld.prototype.hideButtonsWithSelectors = function (selectors) {
 };
 
 MicroWorld.prototype.showButtonsWithSelectors = function (selectors) {
-    var ide = this.ide  
+    var ide = this.ide;
     selectors.asArray().forEach(
         function (selector) {
             ide.controlBar[selector].show();
@@ -590,18 +681,26 @@ MicroWorld.prototype.restrictFileMenuToIndices = function (indices) {
         IDE_Morph.prototype.projectMenu = function () {
             this.oldProjectMenu();
             if (this.microWorldMode) {
-                var menu = this.world().activeMenu;
-                menu.items = menu.items.filter(
-                    function (item, index) {
-                        return indices.contains(index);
-                    }
-                );
+                var menu = this.world().activeMenu,
+                    items = [];
+                // can't use filter because we also want to reorder
+                indices.contents.forEach(function (index) {
+                    items.push(menu.items[index]);
+                });
+                menu.items = items;
                 menu.popup(
                     this.world(),
                     this.controlBar.projectButton.bottomLeft()
                 );
             }
         };
+    }
+};
+
+MicroWorld.prototype.restoreFileMenu = function () {
+    if (IDE_Morph.prototype.oldProjectMenu) {
+        IDE_Morph.prototype.projectMenu = IDE_Morph.prototype.oldProjectMenu;
+        delete IDE_Morph.prototype.oldProjectMenu;
     }
 };
 
