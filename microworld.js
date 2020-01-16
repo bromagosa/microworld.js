@@ -337,7 +337,7 @@ MicroWorld.prototype.overrideMakeABlockDialogs = function () {
     // never launch it in expanded form
     InputSlotDialogMorph.prototype.isLaunchingExpanded = false;
 
-    if !(InputSlotDialogMorph.prototype.oldCreateTypeButtons) {
+    if (!InputSlotDialogMorph.prototype.oldCreateTypeButtons) {
         InputSlotDialogMorph.prototype.oldCreateTypeButtons =
             InputSlotDialogMorph.prototype.createTypeButtons;
         InputSlotDialogMorph.prototype.createTypeButtons = function () {
