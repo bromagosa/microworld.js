@@ -165,7 +165,8 @@ MicroWorld.prototype.addTurnIntoBlockMenuOption = function () {
                                 null,
                                 topBlock.fullCopy(),
                                 new List(),
-                                true // ignore empty slots for custom block reification
+                                true // ignore empty slots for custom block
+                                     // reification
                             );
                         } else if (topBlock instanceof ReporterBlockMorph) {
                             if (topBlock.isPredicate) {
@@ -173,13 +174,20 @@ MicroWorld.prototype.addTurnIntoBlockMenuOption = function () {
                             } else {
                                 definition.type = 'reporter';
                             }
-                            reportBlock = SpriteMorph.prototype.blockForSelector('doReport');
-                            reportBlock.silentReplaceInput(reportBlock.inputs()[0], topBlock.fullCopy());
+                            reportBlock =
+                                SpriteMorph.prototype.blockForSelector(
+                                    'doReport'
+                                );
+                            reportBlock.silentReplaceInput(
+                                reportBlock.inputs()[0],
+                                topBlock.fullCopy()
+                            );
                             definition.body = Process.prototype.reify.call(
                                 null,
                                 reportBlock,
                                 new List(),
-                                true // ignore empty slots for custom block reification
+                                true // ignore empty slots for custom block
+                                     // reification
                             );
                         }
                         definition.category = 'other';
@@ -214,128 +222,147 @@ MicroWorld.prototype.overrideMakeABlockDialogs = function () {
 
     // "Make a Block" dialogs
 
-    BlockDialogMorph.prototype.oldInit = BlockDialogMorph.prototype.init;
-    BlockDialogMorph.prototype.init = function (target, action, environment) {
-        // Force "microworld" category and hide category and scope selectors
-        this.blockType = 'command';
-        this.category = 'other';
-        this.isGlobal = true;
-        this.types = null;
-        BlockDialogMorph.uber.init.call(
-            this,
-            target,
-            action,
-            environment
-        );
-        this.key = 'makeABlock';
-        this.types = new AlignmentMorph('row', this.padding);
-        this.add(this.types);
-        this.createTypeButtons();
-        this.oldFixLayout = this.fixLayout;
-        this.fixLayout = function () {
-            this.oldFixLayout();
-            if (this.body) {
-                this.body.setWidth(this.width() - this.padding * 2);
-            }
-        };
-        this.fixLayout();
-    };
+    if (!BlockDialogMorph.prototype.oldInit) {
+        BlockDialogMorph.prototype.oldInit = BlockDialogMorph.prototype.init;
+        BlockDialogMorph.prototype.init =
+            function (target, action, environment) {
+                // Force "microworld" category and hide category and
+                // scope selectors
+                this.blockType = 'command';
+                this.category = 'other';
+                this.isGlobal = true;
+                this.types = null;
+                BlockDialogMorph.uber.init.call(
+                    this,
+                    target,
+                    action,
+                    environment
+                );
+                this.key = 'makeABlock';
+                this.types = new AlignmentMorph('row', this.padding);
+                this.add(this.types);
+                this.createTypeButtons();
+                this.oldFixLayout = this.fixLayout;
+                this.fixLayout = function () {
+                    this.oldFixLayout();
+                    if (this.body) {
+                        this.body.setWidth(this.width() - this.padding * 2);
+                    }
+                };
+                this.fixLayout();
+            };
+    }
 
-    BlockEditorMorph.prototype.oldAccept = BlockEditorMorph.prototype.accept;
-    BlockEditorMorph.prototype.accept = function () {
-        this.oldAccept();
-        sprite.refreshMicroWorldPalette();
-        sprite.hideSearchButton();
-    };
-
-    BlockEditorMorph.prototype.oldCancel = BlockEditorMorph.prototype.cancel;
-    BlockEditorMorph.prototype.cancel = function () {
-        var def = this.definition;
-        if (this.firstTime) {
-            // canceled the first time the block was created, so removing
-            // the block
-            sprite.deleteAllBlockInstances(def);
-            stage = ide.stage;
-            idx = stage.globalBlocks.indexOf(def);
-            if (idx !== -1) {
-                stage.globalBlocks.splice(idx, 1);
-            }
+    if (!BlockEditorMorph.prototype.oldAccept) {
+        BlockEditorMorph.prototype.oldAccept =
+            BlockEditorMorph.prototype.accept;
+        BlockEditorMorph.prototype.accept = function () {
+            this.oldAccept();
             sprite.refreshMicroWorldPalette();
             sprite.hideSearchButton();
-        }
-        this.oldCancel();
-    };
+        };
+    }
 
-    BlockEditorMorph.prototype.oldUpdateDefinition = BlockEditorMorph.prototype.updateDefinition;
-    BlockEditorMorph.prototype.updateDefinition = function () {
-        this.oldUpdateDefinition();
-        sprite.refreshMicroWorldPalette();
-        sprite.hideSearchButton();
-    };
+    if (!BlockEditorMorph.prototype.oldCancel) {
+        BlockEditorMorph.prototype.oldCancel =
+            BlockEditorMorph.prototype.cancel;
+        BlockEditorMorph.prototype.cancel = function () {
+            var def = this.definition;
+            if (this.firstTime) {
+                // canceled the first time the block was created, so removing
+                // the block
+                sprite.deleteAllBlockInstances(def);
+                stage = ide.stage;
+                idx = stage.globalBlocks.indexOf(def);
+                if (idx !== -1) {
+                    stage.globalBlocks.splice(idx, 1);
+                }
+                sprite.refreshMicroWorldPalette();
+                sprite.hideSearchButton();
+            }
+            this.oldCancel();
+        };
+    }
+
+    if (!BlockEditorMorph.prototype.oldUpdateDefinition) {
+        BlockEditorMorph.prototype.oldUpdateDefinition =
+            BlockEditorMorph.prototype.updateDefinition;
+        BlockEditorMorph.prototype.updateDefinition = function () {
+            this.oldUpdateDefinition();
+            sprite.refreshMicroWorldPalette();
+            sprite.hideSearchButton();
+        };
+    }
 
     // Save into stage global blocks
-    SpriteMorph.prototype.oldMakeBlock = SpriteMorph.prototype.makeBlock;
-    SpriteMorph.prototype.makeBlock = function () {
-        var category = 'other',
-            clr = SpriteMorph.prototype.blockColor['other'],
-            sprite = this,
-            dlg;
-        dlg = new BlockDialogMorph(
-            null,
-            function (definition) {
-                if (definition.spec !== '') {
-                    definition.codeHeader = 'microworld'; // watermark it
-                    ide.stage.globalBlocks.push(definition);
-                    sprite.blocksCache['microworld'].push(definition.templateInstance());
-                    sprite.refreshMicroWorldPalette();
-                    sprite.hideSearchButton();
-                    editor = new BlockEditorMorph(definition, sprite);
-                    editor.firstTime = true;
-                    console.log(editor.firstTime);
-                    editor.popUp();
-                }
-            },
-            sprite
-        );
-        dlg.types.children.forEach(function (each) {
-            each.setColor(clr);
-            each.refresh();
-        });
-        dlg.prompt(
-            'Make a block',
-            null,
-            sprite.world()
-        );
-    };
+    if (!SpriteMorph.prototype.oldMakeBlock) {
+        SpriteMorph.prototype.oldMakeBlock = SpriteMorph.prototype.makeBlock;
+        SpriteMorph.prototype.makeBlock = function () {
+            var category = 'other',
+                clr = SpriteMorph.prototype.blockColor['other'],
+                sprite = this,
+                dlg;
+            dlg = new BlockDialogMorph(
+                null,
+                function (definition) {
+                    if (definition.spec !== '') {
+                        definition.codeHeader = 'microworld'; // watermark it
+                        ide.stage.globalBlocks.push(definition);
+                        sprite.blocksCache['microworld'].push(
+                            definition.templateInstance()
+                        );
+                        sprite.refreshMicroWorldPalette();
+                        sprite.hideSearchButton();
+                        editor = new BlockEditorMorph(definition, sprite);
+                        editor.firstTime = true;
+                        console.log(editor.firstTime);
+                        editor.popUp();
+                    }
+                },
+                sprite
+            );
+            dlg.types.children.forEach(function (each) {
+                each.setColor(clr);
+                each.refresh();
+            });
+            dlg.prompt(
+                'Make a block',
+                null,
+                sprite.world()
+            );
+        };
+    }
 
     // Input Slot Dialog
     // never launch it in expanded form
     InputSlotDialogMorph.prototype.isLaunchingExpanded = false;
 
-    InputSlotDialogMorph.prototype.oldCreateTypeButtons =
-        InputSlotDialogMorph.prototype.createTypeButtons;
-    InputSlotDialogMorph.prototype.createTypeButtons = function () {
-        // Just don't add the expanded form arrow
-        var block,
-            sprite = this,
-            clr = SpriteMorph.prototype.blockColor[this.category];
+    if !(InputSlotDialogMorph.prototype.oldCreateTypeButtons) {
+        InputSlotDialogMorph.prototype.oldCreateTypeButtons =
+            InputSlotDialogMorph.prototype.createTypeButtons;
+        InputSlotDialogMorph.prototype.createTypeButtons = function () {
+            // Just don't add the expanded form arrow
+            var block,
+                sprite = this,
+                clr = SpriteMorph.prototype.blockColor[this.category];
 
-        block = new JaggedBlockMorph(localize('Title text'));
-        block.setColor(clr);
-        this.addBlockTypeButton(
-            function () { sprite.setType(null); },
-            block,
-            function () { return sprite.fragment.type === null; }
-        );
+            block = new JaggedBlockMorph(localize('Title text'));
+            block.setColor(clr);
+            this.addBlockTypeButton(
+                function () { sprite.setType(null); },
+                block,
+                function () { return sprite.fragment.type === null; }
+            );
 
-        block = new JaggedBlockMorph('%inputName');
-        block.setColor(clr);
-        this.addBlockTypeButton(
-            function () { sprite.setType('%s'); },
-            block,
-            function () { return sprite.fragment.type !== null; }
-        );
-    };
+            block = new JaggedBlockMorph('%inputName');
+            block.setColor(clr);
+            this.addBlockTypeButton(
+                function () { sprite.setType('%s'); },
+                block,
+                function () { return sprite.fragment.type !== null; }
+            );
+        };
+    }
 };
 
 MicroWorld.prototype.restoreMakeABlockDialogs = function () {
@@ -346,6 +373,12 @@ MicroWorld.prototype.restoreMakeABlockDialogs = function () {
     SpriteMorph.prototype.makeBlock = SpriteMorph.prototype.oldMakeBlock;
     InputSlotDialogMorph.prototype.createTypeButtons =
         InputSlotDialogMorph.prototype.oldCreateTypeButtons;
+
+    delete BlockDialogMorph.prototype.oldInit;
+    delete BlockEditorMorph.prototype.oldAccept;
+    delete BlockEditorMorph.prototype.oldUpdateDefinition;
+    delete SpriteMorph.prototype.oldMakeBlock;
+    delete InputSlotDialogMorph.prototype.oldCreateTypeButtons;
 };
 
 MicroWorld.prototype.addBlocksWithSpecs = function (specs) {
@@ -373,7 +406,8 @@ MicroWorld.prototype.addBlocksWithSpecs = function (specs) {
         if (selectorOrSpec === '-' || selectorOrSpec === '=') {
             return selectorOrSpec;    
         } else {
-            return primitiveBlock(selectorOrSpec) || customBlock(selectorOrSpec);
+            return primitiveBlock(selectorOrSpec) ||
+                customBlock(selectorOrSpec);
         }
     };
 
